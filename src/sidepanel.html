@@ -79,9 +79,26 @@
       <div class="context-menu" id="saved-context-menu" role="menu" aria-label="固定页面操作" hidden>
         <button id="saved-open" type="button" role="menuitem">
           <span aria-hidden="true">↗</span>
-          <span>打开页面</span>
+          <span class="context-label">打开页面</span>
+        </button>
+        <button id="saved-duplicate" type="button" role="menuitem">
+          <span aria-hidden="true">⧉</span>
+          <span>复制标签</span>
         </button>
         <div class="context-menu-separator" role="separator"></div>
+        <button id="saved-pin" type="button" role="menuitem">
+          <span aria-hidden="true">⌖</span>
+          <span class="context-label">永久固定</span>
+        </button>
+        <button id="saved-mute" type="button" role="menuitem">
+          <span aria-hidden="true">♪</span>
+          <span class="context-label">静音</span>
+        </button>
+        <div class="context-menu-separator" role="separator"></div>
+        <button class="is-danger" id="saved-close" type="button" role="menuitem">
+          <span aria-hidden="true">×</span>
+          <span>关闭并移出文件夹</span>
+        </button>
         <button class="is-danger" id="saved-remove" type="button" role="menuitem">
           <span aria-hidden="true">−</span>
           <span>移出文件夹</span>
@@ -150,8 +167,8 @@
         <span>再次打开相同网址会复用当前窗口已有标签；右键“复制标签”可保留副本</span>
         <span>右键标签可复制、加入固定文件夹、永久固定、静音或关闭</span>
         <span>顶部固定图标：单击切换或重新打开，中键仅关闭页面，固定入口仍保留</span>
-        <span>标签可在顶部固定区、固定文件夹和临时区域之间拖动</span>
-        <span>固定文件夹条目：悬停“×”会关闭并移除；右键“移出文件夹”不会关闭标签</span>
+        <span>标签可在顶部固定区、固定文件夹和临时区域之间拖动，也可在区域内调整顺序</span>
+        <span>固定文件夹条目也可右键复制、永久固定或静音；悬停“×”会关闭并移除</span>
         <span>临时网站分组悬停“×”会关闭组内全部标签</span>
         <span>Chrome 原生标签组可在此展开、收起或保存为固定分组；关闭和删除请使用顶部标签栏</span>
         <span>主题支持跟随系统、浅色和深色 · <kbd>⌘/Ctrl K</kbd> 搜索 · <kbd>Esc</kbd> 关闭弹层</span>
