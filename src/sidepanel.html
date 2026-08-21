@@ -1,0 +1,255 @@
+<!doctype html>
+<html lang="zh-CN">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Tabstead</title>
+    <script src="theme-init.js"></script>
+    <link rel="stylesheet" href="sidepanel.css" />
+  </head>
+  <body>
+    <main class="app">
+      <div class="status" id="status" role="status" aria-live="polite" hidden>
+        <span id="status-text"></span>
+        <button id="undo-close" type="button" hidden>撤销</button>
+      </div>
+
+      <div class="context-menu" id="tab-context-menu" role="menu" aria-label="标签操作" hidden>
+        <button id="context-duplicate" type="button" role="menuitem">
+          <span aria-hidden="true">⧉</span>
+          <span>复制标签</span>
+        </button>
+        <button id="context-add-folder" type="button" role="menuitem">
+          <span aria-hidden="true">▰</span>
+          <span>加入固定文件夹…</span>
+        </button>
+        <div class="context-menu-separator" role="separator"></div>
+        <button id="context-pin" type="button" role="menuitem">
+          <span aria-hidden="true">⌖</span>
+          <span class="context-label">固定标签</span>
+        </button>
+        <button id="context-mute" type="button" role="menuitem">
+          <span aria-hidden="true">♪</span>
+          <span class="context-label">静音</span>
+        </button>
+        <div class="context-menu-separator" role="separator"></div>
+        <button class="is-danger" id="context-close" type="button" role="menuitem">
+          <span aria-hidden="true">×</span>
+          <span>关闭标签</span>
+        </button>
+      </div>
+
+      <div class="context-menu" id="native-group-context-menu" role="menu" aria-label="Chrome 原生分组操作" hidden>
+        <button id="native-group-toggle" type="button" role="menuitem">
+          <span aria-hidden="true">⌄</span>
+          <span class="context-label">收起分组</span>
+        </button>
+        <button id="native-group-new-tab" type="button" role="menuitem">
+          <span aria-hidden="true">＋</span>
+          <span>在组内新建标签</span>
+        </button>
+        <button id="native-group-save-custom" type="button" role="menuitem">
+          <span aria-hidden="true">▰</span>
+          <span>保存为固定工作分组</span>
+        </button>
+        <div class="context-menu-separator" role="separator"></div>
+        <div class="context-menu-note" role="note">关闭或删除原生分组，请使用 Chrome 顶部标签栏</div>
+      </div>
+
+      <div class="context-menu" id="folder-context-menu" role="menu" aria-label="文件夹操作" hidden>
+        <button id="folder-new-tab" type="button" role="menuitem">
+          <span aria-hidden="true">＋</span>
+          <span>在组内新建标签页</span>
+        </button>
+        <button id="folder-open-all" type="button" role="menuitem">
+          <span aria-hidden="true">↗</span>
+          <span>打开全部</span>
+        </button>
+        <button id="folder-rename" type="button" role="menuitem">
+          <span aria-hidden="true">✎</span>
+          <span>重命名</span>
+        </button>
+        <div class="context-menu-separator" role="separator"></div>
+        <button class="is-danger" id="folder-delete" type="button" role="menuitem">
+          <span aria-hidden="true">×</span>
+          <span>删除文件夹</span>
+        </button>
+      </div>
+
+      <div class="context-menu" id="saved-context-menu" role="menu" aria-label="固定页面操作" hidden>
+        <button id="saved-open" type="button" role="menuitem">
+          <span aria-hidden="true">↗</span>
+          <span>打开页面</span>
+        </button>
+        <div class="context-menu-separator" role="separator"></div>
+        <button class="is-danger" id="saved-remove" type="button" role="menuitem">
+          <span aria-hidden="true">−</span>
+          <span>移出文件夹</span>
+        </button>
+      </div>
+
+      <div class="context-menu" id="pin-context-menu" role="menu" aria-label="顶部固定入口操作" hidden>
+        <button id="pin-open" type="button" role="menuitem">
+          <span aria-hidden="true">↗</span>
+          <span class="context-label">打开页面</span>
+        </button>
+        <button id="pin-close-tab" type="button" role="menuitem">
+          <span aria-hidden="true">×</span>
+          <span>关闭当前标签</span>
+        </button>
+        <div class="context-menu-separator" role="separator"></div>
+        <button class="is-danger" id="pin-remove" type="button" role="menuitem">
+          <span aria-hidden="true">−</span>
+          <span>取消永久固定</span>
+        </button>
+      </div>
+
+      <div class="folder-picker" id="folder-picker" role="dialog" aria-modal="true" aria-labelledby="folder-picker-title" hidden>
+        <div class="folder-picker-card">
+          <strong id="folder-picker-title">加入固定文件夹</strong>
+          <div class="folder-options" id="folder-options"></div>
+          <button class="folder-create-option" id="folder-create-option" type="button">＋ 新建文件夹</button>
+          <button class="folder-picker-cancel" id="folder-picker-cancel" type="button">取消</button>
+        </div>
+      </div>
+
+      <section class="pinned-strip" id="pinned-strip" aria-label="固定标签" hidden></section>
+
+      <section class="fixed-area" id="fixed-area" aria-label="固定空间">
+        <header class="fixed-area-header">
+          <button class="fixed-area-toggle" id="fixed-area-toggle" type="button" aria-expanded="true">
+            <span class="section-chevron-slot" id="fixed-area-chevron" aria-hidden="true"></span>
+            <span class="fixed-area-label">固定空间</span>
+            <span class="section-count" id="fixed-folder-count">0</span>
+          </button>
+          <button class="fixed-area-add" id="fixed-area-add" type="button" title="在固定空间中新建文件夹" aria-label="在固定空间中新建文件夹">＋</button>
+        </header>
+        <div class="fixed-folder-list" id="fixed-folder-list"></div>
+      </section>
+
+      <section class="tab-list" id="tab-list" aria-label="当前窗口的标签页"></section>
+      <div class="new-tab-slot" id="new-tab-slot">
+        <button class="new-tab-button" id="new-tab-button" type="button" title="在当前窗口新建标签页">
+          <span class="new-tab-plus" aria-hidden="true">＋</span>
+          <span>新建标签页</span>
+        </button>
+      </div>
+
+      <div class="search-panel" id="search-panel" hidden>
+        <label class="search">
+          <span class="search-icon" aria-hidden="true">⌕</span>
+          <input id="search-input" type="search" placeholder="搜索本窗口的标签" autocomplete="off" />
+          <button id="search-close" type="button" title="关闭搜索" aria-label="关闭搜索">×</button>
+        </label>
+      </div>
+
+      <aside class="help-panel" id="help-panel" hidden>
+        <strong>使用提示</strong>
+        <span>同一主域名在临时区达到 2 个时，会自动显示为网站分组，仅影响侧边栏</span>
+        <span>标签后的 n× 表示完全相同网址的打开份数；底部叠页角标表示可清理数量</span>
+        <span>再次打开相同网址会复用当前窗口已有标签；右键“复制标签”可保留副本</span>
+        <span>右键标签可复制、加入固定文件夹、永久固定、静音或关闭</span>
+        <span>顶部固定图标：单击切换或重新打开，中键仅关闭页面，固定入口仍保留</span>
+        <span>标签可在顶部固定区、固定文件夹和临时区域之间拖动</span>
+        <span>固定文件夹条目：悬停“×”会关闭并移除；右键“移出文件夹”不会关闭标签</span>
+        <span>临时网站分组悬停“×”会关闭组内全部标签</span>
+        <span>Chrome 原生标签组可在此展开、收起或保存为固定分组；关闭和删除请使用顶部标签栏</span>
+        <span>主题支持跟随系统、浅色和深色 · <kbd>⌘/Ctrl K</kbd> 搜索 · <kbd>Esc</kbd> 关闭弹层</span>
+      </aside>
+
+      <div class="theme-menu" id="theme-menu" role="menu" aria-label="选择主题" hidden>
+        <button type="button" role="menuitemradio" data-theme-value="system" aria-checked="true">
+          <svg class="theme-option-icon" viewBox="0 0 20 20" aria-hidden="true">
+            <rect x="2.5" y="3.5" width="15" height="10.5" rx="2"></rect>
+            <path d="M7 17h6M10 14v3"></path>
+          </svg>
+          <span>跟随系统</span>
+          <span class="theme-option-check" aria-hidden="true">✓</span>
+        </button>
+        <button type="button" role="menuitemradio" data-theme-value="light" aria-checked="false">
+          <svg class="theme-option-icon" viewBox="0 0 20 20" aria-hidden="true">
+            <circle cx="10" cy="10" r="3.2"></circle>
+            <path d="M10 2.3v1.5M10 16.2v1.5M2.3 10h1.5M16.2 10h1.5M4.55 4.55l1.05 1.05M14.4 14.4l1.05 1.05M15.45 4.55 14.4 5.6M5.6 14.4l-1.05 1.05"></path>
+          </svg>
+          <span>浅色</span>
+          <span class="theme-option-check" aria-hidden="true">✓</span>
+        </button>
+        <button type="button" role="menuitemradio" data-theme-value="dark" aria-checked="false">
+          <svg class="theme-option-icon" viewBox="0 0 20 20" aria-hidden="true">
+            <path d="M15.9 12.4A6.5 6.5 0 0 1 7.6 4.1a6.5 6.5 0 1 0 8.3 8.3Z"></path>
+          </svg>
+          <span>深色</span>
+          <span class="theme-option-check" aria-hidden="true">✓</span>
+        </button>
+      </div>
+
+      <footer class="utility-bar">
+        <p class="tab-summary" aria-label="当前共打开 0 个标签页" aria-live="polite">
+          <span>当前打开</span>
+          <strong id="tab-count">0</strong>
+          <span>个标签页</span>
+        </p>
+        <nav class="utility-actions" aria-label="侧边栏工具">
+          <button class="icon-button" id="search-toggle" type="button" title="搜索标签（Command K）" aria-label="搜索标签">
+            <svg class="utility-icon" viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="8.5" cy="8.5" r="4.5"></circle>
+              <path d="m12 12 4 4"></path>
+            </svg>
+          </button>
+          <button class="icon-button duplicate-button" id="close-duplicates" type="button" title="暂无可清理的重复标签" aria-label="暂无可清理的重复标签" disabled>
+            <svg class="utility-icon" viewBox="0 0 20 20" aria-hidden="true">
+              <rect x="4" y="6" width="9" height="9" rx="2"></rect>
+              <path d="M7 6V5a2 2 0 0 1 2-2h6a2 2 0 0 1 2 2v6a2 2 0 0 1-2 2h-2"></path>
+            </svg>
+            <strong id="duplicate-count" hidden>0</strong>
+          </button>
+          <button class="icon-button theme-toggle" id="theme-toggle" type="button" title="选择主题" aria-label="选择主题" aria-haspopup="menu" aria-expanded="false">
+            <svg class="utility-icon theme-sun" viewBox="0 0 20 20" aria-hidden="true">
+              <circle cx="10" cy="10" r="3.2"></circle>
+              <path d="M10 2.3v1.5M10 16.2v1.5M2.3 10h1.5M16.2 10h1.5M4.55 4.55l1.05 1.05M14.4 14.4l1.05 1.05M15.45 4.55 14.4 5.6M5.6 14.4l-1.05 1.05"></path>
+            </svg>
+            <svg class="utility-icon theme-moon" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M15.9 12.4A6.5 6.5 0 0 1 7.6 4.1a6.5 6.5 0 1 0 8.3 8.3Z"></path>
+            </svg>
+          </button>
+          <button class="icon-button" id="help-toggle" type="button" title="使用说明" aria-label="使用说明">
+            <svg class="utility-icon" viewBox="0 0 20 20" aria-hidden="true">
+              <path d="M6.8 7.1a3.3 3.3 0 1 1 4.1 3.2c-.9.3-1.4.9-1.4 1.7v.3"></path>
+              <path d="M9.5 15.8h.01"></path>
+            </svg>
+          </button>
+        </nav>
+      </footer>
+
+      <template id="pinned-template">
+        <article class="pinned-tile" draggable="true">
+          <button class="pinned-main" type="button">
+            <span class="pinned-favicon-wrap">
+              <img class="pinned-favicon" alt="" />
+              <span class="pinned-fallback"></span>
+            </span>
+          </button>
+        </article>
+      </template>
+
+      <template id="tab-template">
+        <article class="tab-row" draggable="true">
+          <button class="tab-main" type="button">
+            <span class="favicon-wrap"><img class="favicon" alt="" /></span>
+            <span class="tab-copy">
+              <span class="tab-title"></span>
+            </span>
+          </button>
+          <span class="state-badges"></span>
+          <span class="row-actions">
+            <button class="audio-button row-action" type="button" title="静音" aria-label="静音" hidden>♪</button>
+            <button class="pin-button row-action" type="button" title="固定标签" aria-label="固定标签">⌖</button>
+            <button class="close-button row-action" type="button" title="关闭标签" aria-label="关闭标签">×</button>
+          </span>
+        </article>
+      </template>
+    </main>
+
+    <script src="sidepanel.js"></script>
+  </body>
+</html>

@@ -1,0 +1,17 @@
+{
+  "manifest_version": 3,
+  "name": "Tabstead",
+  "version": "0.15.2",
+  "description": "A local-first side panel for navigating and managing tabs in the current Chrome window.",
+  "minimum_chrome_version": "114",
+  "permissions": ["sidePanel", "tabs", "tabGroups", "storage"],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "打开 Tabstead"
+  },
+  "side_panel": {
+    "default_path": "sidepanel.html"
+  }
+}

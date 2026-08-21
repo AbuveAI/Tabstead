@@ -1,0 +1,46 @@
+name: Bug 反馈
+description: 报告可以稳定复现的异常行为
+title: "[Bug] "
+labels: []
+body:
+  - type: markdown
+    attributes:
+      value: 感谢反馈。请勿提交私人网址、Cookie、访问令牌或其他敏感信息。
+  - type: input
+    id: chrome-version
+    attributes:
+      label: Chrome 版本
+      placeholder: 例如 140.0.7339.0
+    validations:
+      required: true
+  - type: input
+    id: operating-system
+    attributes:
+      label: 操作系统
+      placeholder: 例如 macOS 15.6、Windows 11
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: 复现步骤
+      placeholder: 请按顺序说明如何触发问题。
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: 预期行为
+    validations:
+      required: true
+  - type: textarea
+    id: actual
+    attributes:
+      label: 实际行为
+    validations:
+      required: true
+  - type: textarea
+    id: additional-context
+    attributes:
+      label: 补充信息
+      description: 可以提供已脱敏的截图或 chrome://extensions 中的错误信息。
