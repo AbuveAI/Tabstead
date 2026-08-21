@@ -39,6 +39,10 @@ const folderRenameButton = document.querySelector('#folder-rename');
 const folderDeleteButton = document.querySelector('#folder-delete');
 const savedContextMenu = document.querySelector('#saved-context-menu');
 const savedOpenButton = document.querySelector('#saved-open');
+const savedDuplicateButton = document.querySelector('#saved-duplicate');
+const savedPinButton = document.querySelector('#saved-pin');
+const savedMuteButton = document.querySelector('#saved-mute');
+const savedCloseButton = document.querySelector('#saved-close');
 const savedRemoveButton = document.querySelector('#saved-remove');
 const pinContextMenu = document.querySelector('#pin-context-menu');
 const pinOpenButton = document.querySelector('#pin-open');
@@ -255,13 +259,11 @@ function fixedEntryForTabId(tabId) {
 function temporarySectionForTab(tab) {
   if (tab.groupId !== NO_GROUP) return { kind: 'native', groupId: tab.groupId };
 
-  const savedUrls = fixedFolderUrlSet();
   const pendingFolderTabIds = fixedFolderPendingTabIdSet();
   const boundFolderTabIds = fixedItemBoundTabIdSet();
   const ungroupedTabs = tabs.filter((candidate) => (
     !candidate.pinned
     && candidate.groupId === NO_GROUP
-    && !savedUrls.has(candidate.url)
     && !pendingFolderTabIds.has(candidate.id)
     && !boundFolderTabIds.has(candidate.id)
   ));
@@ -427,7 +429,9 @@ function clearDragState() {
   draggedPersistentPin = undefined;
   draggedFixedEntry = undefined;
   setPinnedDropZoneVisible(false);
-  document.querySelectorAll('.is-drop-target').forEach((element) => element.classList.remove('is-drop-target'));
+  document.querySelectorAll('.is-drop-target, .is-drop-before, .is-drop-after').forEach((element) => {
+    element.classList.remove('is-drop-target', 'is-drop-before', 'is-drop-after');
+  });
 }
 
 function canDropIntoTemporarySection(kind, siteKey, url) {
@@ -685,9 +689,18 @@ function openFolderContextMenu(folder, x, y) {
   positionContextMenu(folderContextMenu, x, y, folderNewTabButton);
 }
 
-function openSavedContextMenu(folder, item, x, y) {
+function openSavedContextMenu(folder, item, tab, x, y) {
   closeContextMenu();
-  contextMenuSavedItem = { folder, item };
+  contextMenuSavedItem = { folder, item, tab };
+  savedOpenButton.querySelector('.context-label').textContent = tab ? '切换到页面' : '打开页面';
+  savedDuplicateButton.disabled = !tab;
+  savedPinButton.disabled = !isSavableUrl(tab?.url || item.url);
+  savedPinButton.querySelector('.context-label').textContent = isPersistentlyPinned(tab?.url || item.url)
+    ? '取消永久固定'
+    : '永久固定';
+  savedMuteButton.disabled = !tab;
+  savedMuteButton.querySelector('.context-label').textContent = tab?.mutedInfo?.muted ? '取消静音' : '静音';
+  savedCloseButton.disabled = !tab;
   positionContextMenu(savedContextMenu, x, y, savedOpenButton);
 }
 
@@ -925,6 +938,27 @@ async function togglePersistentPin(tab) {
   }
 }
 
+async function togglePersistentPinForSavedItem(item, tab) {
+  const url = tab?.url || item?.url;
+  if (!isSavableUrl(url)) return;
+  const existing = persistentPinForUrl(url);
+  if (existing) {
+    await removePersistentPin(existing);
+    return;
+  }
+  if (tab) {
+    await addPersistentPin(tab);
+    return;
+  }
+  persistentPins.push({
+    id: crypto.randomUUID(),
+    url,
+    title: item.title || url,
+    favIconUrl: item.favIconUrl || ''
+  });
+  await savePersistentPins();
+}
+
 async function movePersistentPin(sourceId, targetId) {
   const sourceIndex = persistentPins.findIndex((pin) => pin.id === sourceId);
   const targetIndex = persistentPins.findIndex((pin) => pin.id === targetId);
@@ -982,14 +1016,6 @@ async function saveFixedFolders({ renderAfter = true } = {}) {
 
   writeFallbackFixedFolders(fixedFolders);
   if (renderAfter) render();
-}
-
-function fixedFolderUrlSet() {
-  return new Set(fixedFolders.flatMap((folder) => (
-    folder.items.flatMap((item) => (
-      isSavableUrl(item.url) && !fixedItemTabBindings.has(item.id) ? [item.url] : []
-    ))
-  )));
 }
 
 function fixedFolderPendingTabIdSet() {
@@ -1265,6 +1291,18 @@ async function moveFixedEntryToFolder(entry, targetFolder) {
   setStatus(`已移动到“${targetFolder.name}”`);
 }
 
+async function reorderFixedEntry(folder, sourceItemId, targetItemId, placeAfter) {
+  if (!folder || sourceItemId === targetItemId) return;
+  const sourceIndex = folder.items.findIndex((item) => item.id === sourceItemId);
+  if (sourceIndex < 0 || !folder.items.some((item) => item.id === targetItemId)) return;
+
+  const [sourceItem] = folder.items.splice(sourceIndex, 1);
+  const targetIndex = folder.items.findIndex((item) => item.id === targetItemId);
+  folder.items.splice(targetIndex + (placeAfter ? 1 : 0), 0, sourceItem);
+  await saveFixedFolders();
+  setStatus('已调整固定文件夹中的标签顺序');
+}
+
 async function placeTabInTemporarySection(tab, kind) {
   if (!tab?.id) return;
   if (tab.pinned) await chrome.tabs.update(tab.id, { pinned: false });
@@ -1377,11 +1415,14 @@ function createFixedItemRow(folder, item) {
     ? tabs.find((tab) => tab.id === item.pendingTabId)
     : undefined;
   const boundTab = boundTabForFixedItem(item);
+  const exactOpenTabs = isSavableUrl(item.url)
+    ? tabs.filter((tab) => tab.url === item.url)
+    : [];
   const openTabs = pendingTab
     ? [pendingTab]
     : boundTab
-      ? [boundTab]
-      : tabs.filter((tab) => isSavableUrl(item.url) && tab.url === item.url);
+      ? [boundTab, ...exactOpenTabs.filter((tab) => tab.id !== boundTab.id)]
+      : exactOpenTabs;
   const active = openTabs.some((tab) => tab.active);
   const representedTab = pendingTab
     || boundTab
@@ -1434,7 +1475,7 @@ function createFixedItemRow(folder, item) {
   mainButton.addEventListener('click', () => openSavedItem(item).catch(handleError));
   mainButton.addEventListener('contextmenu', (event) => {
     event.preventDefault();
-    openSavedContextMenu(folder, item, event.clientX, event.clientY);
+    openSavedContextMenu(folder, item, representedTab, event.clientX, event.clientY);
   });
   row.addEventListener('dragstart', (event) => {
     draggedTab = undefined;
@@ -1449,6 +1490,28 @@ function createFixedItemRow(folder, item) {
   row.addEventListener('dragend', () => {
     row.classList.remove('is-dragging');
     clearDragState();
+  });
+  row.addEventListener('dragover', (event) => {
+    const source = draggedFixedEntry;
+    if (!source || source.folder.id !== folder.id || source.item.id === item.id) return;
+    event.preventDefault();
+    event.stopPropagation();
+    event.dataTransfer.dropEffect = 'move';
+    const placeAfter = event.clientY >= row.getBoundingClientRect().top + row.offsetHeight / 2;
+    row.classList.toggle('is-drop-before', !placeAfter);
+    row.classList.toggle('is-drop-after', placeAfter);
+  });
+  row.addEventListener('dragleave', (event) => {
+    if (!row.contains(event.relatedTarget)) row.classList.remove('is-drop-before', 'is-drop-after');
+  });
+  row.addEventListener('drop', (event) => {
+    const source = draggedFixedEntry;
+    if (!source || source.folder.id !== folder.id || source.item.id === item.id) return;
+    event.preventDefault();
+    event.stopPropagation();
+    const placeAfter = row.classList.contains('is-drop-after');
+    row.classList.remove('is-drop-before', 'is-drop-after');
+    reorderFixedEntry(folder, source.item.id, item.id, placeAfter).catch(handleError);
   });
   row.append(mainButton);
   if (splitViewIdForTab(representedTab) !== undefined) {
@@ -1987,7 +2050,6 @@ function render({ preserveViewport = false, revealActive = false } = {}) {
   }
 
   renderFixedFolders();
-  const savedUrls = fixedFolderUrlSet();
   const pendingFolderTabIds = fixedFolderPendingTabIdSet();
   const boundFolderTabIds = fixedItemBoundTabIdSet();
 
@@ -2029,7 +2091,6 @@ function render({ preserveViewport = false, revealActive = false } = {}) {
   const ungroupedTabs = tabs.filter((tab) => (
     !tab.pinned
     && tab.groupId === NO_GROUP
-    && !savedUrls.has(tab.url)
     && !pendingFolderTabIds.has(tab.id)
     && !boundFolderTabIds.has(tab.id)
   ));
@@ -2316,6 +2377,28 @@ savedOpenButton.addEventListener('click', () => {
   const saved = contextMenuSavedItem;
   closeContextMenu();
   if (saved) openSavedItem(saved.item).catch(handleError);
+});
+savedDuplicateButton.addEventListener('click', () => {
+  const saved = contextMenuSavedItem;
+  closeContextMenu();
+  if (saved?.tab) duplicateTab(saved.tab).catch(handleError);
+});
+savedPinButton.addEventListener('click', () => {
+  const saved = contextMenuSavedItem;
+  closeContextMenu();
+  if (saved) togglePersistentPinForSavedItem(saved.item, saved.tab).catch(handleError);
+});
+savedMuteButton.addEventListener('click', () => {
+  const saved = contextMenuSavedItem;
+  closeContextMenu();
+  if (saved?.tab) {
+    chrome.tabs.update(saved.tab.id, { muted: !saved.tab.mutedInfo?.muted }).catch(handleError);
+  }
+});
+savedCloseButton.addEventListener('click', () => {
+  const saved = contextMenuSavedItem;
+  closeContextMenu();
+  if (saved?.tab) closeAndRemoveFixedItem(saved.folder, saved.item, saved.tab).catch(handleError);
 });
 savedRemoveButton.addEventListener('click', () => {
   const saved = contextMenuSavedItem;
